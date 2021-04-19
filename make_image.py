@@ -1,6 +1,6 @@
 import subprocess as proc
 
-efi_path = "uefi/target/x86_64-unknown-uefi/debug/uefi.efi"
+efi_path = "bootloader/target/x86_64-unknown-uefi/debug/bootloader.efi"
 proc.call('cp '+ efi_path +' BOOTX64.EFI', shell=True)
 
 kernel_path = "kernel/target/x86_64/debug/kernel.elf"
@@ -18,5 +18,3 @@ proc.call('umount mnt', shell=True)
 proc.call('rm -rf mnt', shell=True)
 proc.call('rm BOOTX64.EFI', shell=True)
 proc.call('rm kernel.elf', shell=True)
-
-#qemu-system-x86_64 -drive if=pflash,file=./OVMF_CODE.fd -drive if=pflash,file=./OVMF_VARS.fd -hda disk.img

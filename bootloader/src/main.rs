@@ -1,4 +1,5 @@
 #![feature(abi_efiapi)]
+#![feature(alloc_error_handler)]
 #![no_std]
 #![no_main]
 
@@ -7,8 +8,16 @@ use uefi::table::boot::{MemoryType, MemoryAttribute};
 use uefi::proto::loaded_image::LoadedImage;
 use uefi::proto::media::fs::SimpleFileSystem;
 use uefi::proto::media::file::{File, RegularFile, Directory, FileMode, FileAttribute};
+use uefi::proto::console::gop::{GraphicsOutput, FrameBuffer};
+use core::alloc::Layout;
 use core::panic::PanicInfo;
 use core::fmt::Write;
+
+
+#[alloc_error_handler]
+fn on_oom(_layout: Layout) -> ! {
+    loop {}
+}
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -49,6 +58,10 @@ fn u64_to_ascii(number: u64) -> [u8;16] {
 
 #[entry]
 fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
+
+    unsafe{
+        uefi::alloc::init(system_table.boot_services());
+    }
 
     writeln!(system_table.stdout(), "Hello, world!").unwrap();
 
@@ -174,6 +187,39 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
     //書き込みの反映。自分の環境ではこれを書かないと変更が反映されなかった
     memory_map_file.flush().unwrap_success();
     //↑メモリマップの保存
+
+    //↓openGOP
+    //LocateHandleBuffer(gEfiGraphicsOutputProtocolGuid)
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
+    let gop_handles = system_table.boot_services().find_handles::<GraphicsOutput>().unwrap_success();
+    //OpenProtocol
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
+    let gop = system_table.boot_services().handle_protocol::<GraphicsOutput>(gop_handles[0]).unwrap_success().get();
+    //↑openGOP
+
+    //frame_buffer書き込み
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
+    let mut frame_buffer: FrameBuffer;
+    unsafe {
+        frame_buffer = (*gop).frame_buffer();
+    }
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
+    for i in 0..frame_buffer.size() {
+        unsafe {
+            frame_buffer.write_byte(i,255);
+        }
+    }
+
+    //open kernel.elf
+//    let kernelfile
+//    let memory_map_file_handle = root_dir.open("\\memmap",FileMode::CreateReadWrite,FileAttribute::empty()).unwrap_success();
+    //サイズ取得
+    //AllocatePages(read)
+    //read
+    //AllocatePages(exe)
+    //read
+    //exit
+    //entry
 
     writeln!(system_table.stdout(), "Kernel did not execute").unwrap();
 
