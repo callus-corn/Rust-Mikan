@@ -1,5 +1,5 @@
 [package]
-name = "uefi"
+name = "bootloader"
 version = "0.1.0"
 authors = ["callus-corn <mtfm_ymzk@yahoo.co.jp>"]
 edition = "2018"

@@ -4,11 +4,13 @@
 #![no_main]
 
 use uefi::prelude::*;
-use uefi::table::boot::{MemoryType, MemoryAttribute};
+use uefi::table::boot::{MemoryType, MemoryAttribute, AllocateType};
 use uefi::proto::loaded_image::LoadedImage;
 use uefi::proto::media::fs::SimpleFileSystem;
+use uefi::proto::media::file;
 use uefi::proto::media::file::{File, RegularFile, Directory, FileMode, FileAttribute};
 use uefi::proto::console::gop::{GraphicsOutput, FrameBuffer};
+use core::mem;
 use core::alloc::Layout;
 use core::panic::PanicInfo;
 use core::fmt::Write;
@@ -211,18 +213,55 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
     }
 
     //open kernel.elf
-//    let kernelfile
-//    let memory_map_file_handle = root_dir.open("\\memmap",FileMode::CreateReadWrite,FileAttribute::empty()).unwrap_success();
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
+    let kernel_file_handle = root_dir.open("\\kernel.elf",FileMode::Read,FileAttribute::empty()).unwrap_success();
+    let mut kernel_file: RegularFile;
+    unsafe {
+        kernel_file = RegularFile::new(kernel_file_handle);
+    }
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
+    //info取得
+    let file_info_buffer: &mut [u8] = &mut [0; 80+24];
+    let file_info: &mut file::FileInfo = kernel_file.get_info(file_info_buffer).unwrap().unwrap();
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
     //サイズ取得
-    //AllocatePages(read)
+    let kernel_file_size = file_info.file_size();
+    let page_count = ((kernel_file_size + 0xfff) / 0x1000) as usize;
+    //execのために仕方なく
+    let page_count = page_count*2;
+    //AllocatePages
+    let base_addr = 0x200000;
+    system_table.boot_services().allocate_pages(AllocateType::Address(base_addr), MemoryType::LOADER_DATA, page_count).unwrap_success();
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
     //read
-    //AllocatePages(exe)
-    //read
+    let file_buffer: &mut [u8] = &mut [0; 0x2000];
+    kernel_file.read(file_buffer).unwrap_success();
+    for i in 0..file_buffer.len() {
+        let addr = base_addr as *mut u8;
+        unsafe {
+            system_table.boot_services().memset(addr.offset(i as isize), 1, file_buffer[i]);
+        }
+    }
+    writeln!(system_table.stdout(), "Hello, world!").unwrap();
+    let exec_addr = base_addr+0x1000;
+    //entrypointの調整
+    for i in 0..file_buffer.len() {
+        let addr = exec_addr as *mut u8;
+        unsafe {
+            system_table.boot_services().memset(addr.offset(i as isize), 1, file_buffer[i]);
+        }
+    }
+    writeln!(system_table.stdout(), "Bye").unwrap();
     //exit
+    system_table.exit_boot_services(handle, memory_map_buffer).unwrap_success();
     //entry
+    unsafe {
+        let entry_point = mem::transmute::<*const (), extern "sysv64" fn(args_ptr: *mut FrameBuffer) -> !>(0x201120 as *const ());
+        entry_point(&mut frame_buffer);
+    }
 
-    writeln!(system_table.stdout(), "Kernel did not execute").unwrap();
+    //writeln!(system_table.stdout(), "Kernel did not execute").unwrap();
 
-    loop {}
+    //loop {}
     //Status::SUCCESS
 }
