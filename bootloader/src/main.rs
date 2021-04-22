@@ -109,7 +109,7 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         };
 
         //alloc使ったらなんかコンパイルできた
-        let line = alloc::format!("{},{},{},{}",memory_type, physical_start, number_of_pages, attribute);
+        let line = alloc::format!("{:016x},{:016x},{:016x},{:016x}\n",memory_type, physical_start, number_of_pages, attribute);
         memory_map_file.write(line.as_bytes()).unwrap_success();
     }
     //書き込みの反映。自分の環境ではこれを書かないと変更が反映されなかった

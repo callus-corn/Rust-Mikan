@@ -1,5 +1,4 @@
 #![feature(abi_efiapi)]
-#![feature(asm)]
 #![no_std]
 #![no_main]
 
