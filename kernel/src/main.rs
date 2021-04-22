@@ -1,4 +1,5 @@
 #![feature(abi_efiapi)]
+#![feature(asm)]
 #![no_std]
 #![no_main]
 
@@ -33,10 +34,9 @@ pub extern "C" fn _start(args_ptr: *mut FrameBuffer) -> ! {
 
     for i in 0..frame_buffer.size() {
         unsafe {
-            frame_buffer.write_byte(i,0);
+            frame_buffer.write_byte(i, (i % 256) as u8);
         }
     }
 
     loop {}
 }
-
