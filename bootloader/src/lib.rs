@@ -1,4 +1,4 @@
 #![no_std]
 
-pub mod vga;
 pub mod elf;
+pub mod vga;

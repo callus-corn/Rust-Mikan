@@ -1,7 +1,7 @@
 extern crate alloc;
 
-use core::iter::Iterator;
 use alloc::vec::Vec;
+use core::iter::Iterator;
 
 pub struct ElfHeader {
     //面倒なのでウソ実装
@@ -13,9 +13,7 @@ impl ElfHeader {
         let entry_ptr = (buffer.as_ptr() as u64 + 24) as *const u64;
         //elfの仕様どおりに作っているつもりだが安全性は不明
         let entry = unsafe { *entry_ptr };
-        ElfHeader {
-            entry: entry,
-        }
+        ElfHeader { entry: entry }
     }
 }
 
@@ -47,24 +45,24 @@ impl ProgramHeaderIter {
         let len = unsafe { *len_ptr };
 
         for i in 0..len {
-            let file_offset = ph_offset + (i*program_header_size) as u64;
-            let offset_ptr = (buffer.as_ptr() as u64 + file_offset + 8 ) as *const u64;
+            let file_offset = ph_offset + (i * program_header_size) as u64;
+            let offset_ptr = (buffer.as_ptr() as u64 + file_offset + 8) as *const u64;
             //elfの仕様どおりに作っているつもりだが安全性は不明
             let offset = unsafe { *offset_ptr };
-            let phys_addr_ptr = (buffer.as_ptr() as  u64 + file_offset + 24 ) as *const u64;
+            let phys_addr_ptr = (buffer.as_ptr() as u64 + file_offset + 24) as *const u64;
             //elfの仕様どおりに作っているつもりだが安全性は不明
             let phys_addr = unsafe { *phys_addr_ptr };
-            let memory_size_ptr = (buffer.as_ptr() as  u64 + file_offset + 40 ) as *const u64;
+            let memory_size_ptr = (buffer.as_ptr() as u64 + file_offset + 40) as *const u64;
             //elfの仕様どおりに作っているつもりだが安全性は不明
             let memory_size = unsafe { *memory_size_ptr };
-            program_headers.push(ProgramHeader{
+            program_headers.push(ProgramHeader {
                 paddr: phys_addr,
                 offset: offset,
                 memsz: memory_size,
             });
         }
 
-        ProgramHeaderIter{
+        ProgramHeaderIter {
             program_headers: program_headers,
             index: 0,
             len: len,

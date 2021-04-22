@@ -54,7 +54,6 @@ pub struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
-
 /// A writer type that allows writing ASCII bytes and strings to an underlying `Buffer`.
 ///
 /// Wraps lines at `BUFFER_WIDTH`. Supports newline characters and implements the
