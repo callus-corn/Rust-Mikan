@@ -36,36 +36,29 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
     let boot_services = system_table.boot_services();
     let stdout = system_table.stdout();
 
-    //uefi-rsの拡張機能(feature = exts)を使うために初期化が必要
-    //拡張機能を使わないならいらない
+    //uefi-rsのextsフィーチャー(feature = exts)を使うために初期化が必要
+    //extsフィーチャーを使わないならいらない
     unsafe {
         uefi::alloc::init(boot_services);
     }
 
     writeln!(stdout, "Hello, world!").unwrap();
 
-    //メモリマップの取得
-    //メモリマップを書き込むバッファ（サイズは適当）
+    //バッファサイズは適当
     let memory_map_buffer = &mut [0; 4096 * 4];
-    //帰ってくるのはmap_keyとdescriptorのイテレータ（イテレータの中にメモリマップがある）
     //このResultはuefi-rs独自実装のためunwrap_successを使う。
     let (_memory_map_key, descriptor_iter) =
         boot_services.memory_map(memory_map_buffer).unwrap_success();
 
-    //ルートディレクトリを開く
     //uefi-rsの拡張機能(feature = exts)
-    //入手しているのは生ポインタ
-    //uefiから返ってくるstatusがsuccess以外だとpanicが呼ばれる
-    //そのため引数が正しければ安全なポインタのはず
     let file_system = boot_services
         .get_image_file_system(handle)
         .unwrap_success()
         .get();
     //生ポインタ解決
+    //uefiから返ってくるstatusがsuccess以外だとpanicが呼ばれるため安全なポインタのはず
     let mut root_dir = unsafe { (*file_system).open_volume().unwrap_success() };
 
-    //メモリマップの保存
-    //保存するファイルの作成とFileHandleの取得
     let memory_map_file_handle = root_dir
         .open(
             "\\memmap",
@@ -74,14 +67,13 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         )
         .unwrap_success();
     //RegularFileに変換する必要あり(unsafe)
-    //安全性はよくわからない
+    //理由はよくわかっていない
+    //安全性もよくわからない
     let mut memory_map_file = unsafe { RegularFile::new(memory_map_file_handle) };
 
-    //ヘッダの書き込み
     memory_map_file
         .write("Type, PhysicalStart, NumberOfPages, Attribute\n".as_bytes())
         .unwrap_success();
-    //メモリディスクリプタの書き込み
     for descriptor in descriptor_iter {
         let memory_type: u32 = match descriptor.ty {
             MemoryType::RESERVED => 0,
@@ -119,7 +111,6 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
             _ => 0,
         };
 
-        //alloc使ったらなんかコンパイルできた
         let line = alloc::format!(
             "{:016x},{:016x},{:016x},{:016x}\n",
             memory_type,
@@ -129,21 +120,18 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         );
         memory_map_file.write(line.as_bytes()).unwrap_success();
     }
-    //書き込みの反映。自分の環境ではこれを書かないと変更が反映されなかった
+    //自分の環境ではこれを書かないと変更が反映されなかった
     memory_map_file.flush().unwrap_success();
 
-    //open GraphicsOutputProtocol
-    //ここも拡張機能(feature = exts)
+    //feature = exts
     let gop_handles = boot_services
         .find_handles::<GraphicsOutput>()
         .unwrap_success();
-    //OpenProtocol
-    //unsafecellなのでget
+    //unsafecellなのでget()がいる
     let gop = boot_services
         .handle_protocol::<GraphicsOutput>(gop_handles[0])
         .unwrap_success()
         .get();
-    //frame_bufferを全て真っ白にする
     //gopがおかしいとpanicが呼ばれるのでここまで動いていたら安全なはず
     let mut frame_buffer = unsafe { (*gop).frame_buffer() };
     for i in 0..frame_buffer.size() {
@@ -153,20 +141,17 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         }
     }
 
-    //open kernel.elf
     let kernel_file_handle = root_dir
         .open("\\kernel.elf", FileMode::Read, FileAttribute::empty())
         .unwrap_success();
     //安全性は不明
     let mut kernel_file = unsafe { RegularFile::new(kernel_file_handle) };
-    //info取得
     //バッファのサイズ=構造体のサイズ+ファイル名(kernel.elf=12*16bit)
     let file_info_buffer = &mut [0; 80 + 24];
     let file_info: &mut file::FileInfo = kernel_file.get_info(file_info_buffer).unwrap().unwrap();
-    //サイズ取得
     let kernel_file_size = file_info.file_size();
     let page_count = ((kernel_file_size + 0xfff) / 0x1000) as usize;
-    //AllocatePages
+    //elfからbase_addrを取得する方法がよくわからなかったのでハードコーディング
     let base_addr = 0x200000;
     system_table
         .boot_services()
@@ -176,7 +161,6 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
             page_count,
         )
         .unwrap_success();
-    //カーネルファイルの読み込み
     //配列のサイズが分からないのでallocate_poolから変換
     let file_buffer_addr = boot_services
         .allocate_pool(MemoryType::LOADER_DATA, kernel_file_size as usize)
@@ -186,7 +170,6 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         unsafe { slice::from_raw_parts_mut(file_buffer_addr, kernel_file_size as usize) };
     kernel_file.read(file_buffer).unwrap_success();
 
-    //elfの展開
     let elf_header = ElfHeader::new(file_buffer);
     let entry_point_addr = elf_header.entry as *const ();
     let program_header_iter = ProgramHeaderIter::new(file_buffer);
