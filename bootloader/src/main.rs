@@ -5,7 +5,8 @@
 
 extern crate alloc;
 
-use bootloader::elf::{ElfHeader, ProgramHeaderIter};
+use bootloader::arg;
+use bootloader::elf::Elf;
 use bootloader::vga::Writer;
 use core::alloc::Layout;
 use core::fmt::Write;
@@ -13,9 +14,8 @@ use core::mem;
 use core::panic::PanicInfo;
 use core::slice;
 use uefi::prelude::*;
-use uefi::proto::console::gop::{FrameBuffer, GraphicsOutput};
-use uefi::proto::media::file;
-use uefi::proto::media::file::{File, FileAttribute, FileMode, RegularFile};
+use uefi::proto::console::gop::{GraphicsOutput, PixelFormat};
+use uefi::proto::media::file::{File, FileAttribute, FileInfo, FileMode, RegularFile};
 use uefi::table::boot::{AllocateType, MemoryAttribute, MemoryType};
 
 #[alloc_error_handler]
@@ -50,13 +50,13 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
     let (_memory_map_key, descriptor_iter) =
         boot_services.memory_map(memory_map_buffer).unwrap_success();
 
-    //uefi-rsの拡張機能(feature = exts)
+    //feature = exts
     let file_system = boot_services
         .get_image_file_system(handle)
         .unwrap_success()
         .get();
     //生ポインタ解決
-    //uefiから返ってくるstatusがsuccess以外だとpanicが呼ばれるため安全なポインタのはず
+    //安全性はget_image_file_systemに依存
     let mut root_dir = unsafe { (*file_system).open_volume().unwrap_success() };
 
     let memory_map_file_handle = root_dir
@@ -132,7 +132,7 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .handle_protocol::<GraphicsOutput>(gop_handles[0])
         .unwrap_success()
         .get();
-    //gopがおかしいとpanicが呼ばれるのでここまで動いていたら安全なはず
+    //安全性はhandle_protocolに依存
     let mut frame_buffer = unsafe { (*gop).frame_buffer() };
     for i in 0..frame_buffer.size() {
         //安全性は不明
@@ -146,59 +146,71 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .unwrap_success();
     //安全性は不明
     let mut kernel_file = unsafe { RegularFile::new(kernel_file_handle) };
-    //バッファのサイズ=構造体のサイズ+ファイル名(kernel.elf=12*16bit)
-    let file_info_buffer = &mut [0; 80 + 24];
-    let file_info: &mut file::FileInfo = kernel_file.get_info(file_info_buffer).unwrap().unwrap();
-    let kernel_file_size = file_info.file_size();
-    let page_count = ((kernel_file_size + 0xfff) / 0x1000) as usize;
-    //elfからbase_addrを取得する方法がよくわからなかったのでハードコーディング
-    let base_addr = 0x200000;
-    system_table
-        .boot_services()
-        .allocate_pages(
-            AllocateType::Address(base_addr),
-            MemoryType::LOADER_DATA,
-            page_count,
-        )
-        .unwrap_success();
-    //配列のサイズが分からないのでallocate_poolから変換
-    let file_buffer_addr = boot_services
-        .allocate_pool(MemoryType::LOADER_DATA, kernel_file_size as usize)
-        .unwrap_success();
-    //安全性は不明
-    let file_buffer =
-        unsafe { slice::from_raw_parts_mut(file_buffer_addr, kernel_file_size as usize) };
-    kernel_file.read(file_buffer).unwrap_success();
+    //kernel_file_info_bufferのサイズ=構造体のサイズ+ファイル名(kernel.elf=12*16bit)
+    let kernel_file_info_buffer = &mut [0; 80 + 24];
+    let kernel_file_info: &mut FileInfo  = kernel_file.get_info(kernel_file_info_buffer).unwrap().unwrap();
+    let kernel_file_size = kernel_file_info.file_size();
+    let kernel_file_buffer_ptr = boot_services.allocate_pool(MemoryType::LOADER_DATA, kernel_file_size as usize).unwrap_success();
+    //安全性はallocate_poolに依存
+    let kernel_file_buffer = unsafe { slice::from_raw_parts_mut(kernel_file_buffer_ptr, kernel_file_size as usize) };
+    kernel_file.read(kernel_file_buffer).unwrap_success();
 
-    let elf_header = ElfHeader::new(file_buffer);
-    let entry_point_addr = elf_header.entry as *const ();
-    let program_header_iter = ProgramHeaderIter::new(file_buffer);
-    for program_header in program_header_iter {
-        let addr = program_header.paddr as *mut u8;
-        let offset = program_header.offset as usize;
-        let size = program_header.memsz;
+    let elf_file = Elf::new(kernel_file_buffer);
+    let kernel_base_addr = elf_file.calculate_base_addr() as usize;
+    let kernel_page_count = elf_file.calculate_page_count();
+    boot_services.allocate_pages(AllocateType::Address(kernel_base_addr), MemoryType::LOADER_DATA, kernel_page_count).unwrap_success();
+    for program_header in elf_file.program_header_iter() {
+        if !program_header.type_is_load() {
+            continue;
+        }
+        let addr = program_header.p_vaddr() as *mut u8;
+        let offset = program_header.p_offset() as usize;
+        let size = program_header.p_memsz();
         //読み込みは1バイト単位
         //もっといい方法があるかも？
         for i in 0..size {
             //安全性は不明
             unsafe {
-                boot_services.memset(addr.offset(i as isize), 1, file_buffer[offset + i as usize]);
+                boot_services.memset(addr.offset(i as isize), 1, kernel_file_buffer[offset + i as usize]);
             }
         }
     }
 
-    //exit
     writeln!(stdout, "Bye").unwrap();
     system_table
         .exit_boot_services(handle, memory_map_buffer)
         .unwrap_success();
 
-    //entry
-    //elfの仕様に則っているので安全なはず
-    let entry_point = unsafe {
-        mem::transmute::<*const (), extern "sysv64" fn(args_ptr: *mut FrameBuffer) -> !>(
-            entry_point_addr,
+    let kernel_entry_point = elf_file.entry() as *const ();
+    let kernel_entry = unsafe {
+        mem::transmute::<*const (), extern "sysv64" fn(args_ptr: *const arg::Argument) -> !>(
+            kernel_entry_point,
         )
     };
-    entry_point(&mut frame_buffer);
+    let frame_buffer_base = frame_buffer.as_mut_ptr();
+    let frame_buffer_size = frame_buffer.size();
+    let arg_frame_buffer = arg::FrameBuffer {
+        base: frame_buffer_base,
+        size: frame_buffer_size,
+    };
+    //ここまで動いてるなら安全
+    let gop_mode_info = unsafe { (*gop).current_mode_info() };
+    let pixels_per_scan_line = gop_mode_info.stride();
+    let (horizontal_resolution, vertical_resolution) = gop_mode_info.resolution();
+    let pixel_format = match gop_mode_info.pixel_format() {
+        PixelFormat::Rgb => arg::PixelFormat::Rgb,
+        PixelFormat::Bgr => arg::PixelFormat::Bgr,
+        _ => panic!("Unimplemented"),
+    };
+    let arg_frame_buffer_config = arg::FrameBufferConfig {
+        pixels_per_scan_line: pixels_per_scan_line,
+        horizontal_resolution: horizontal_resolution,
+        vertical_resolution: vertical_resolution,
+        pixel_format: pixel_format,
+    };
+    let args = arg::Argument {
+        frame_buffer: arg_frame_buffer,
+        frame_buffer_config: arg_frame_buffer_config,
+    };
+    kernel_entry(&args);
 }
