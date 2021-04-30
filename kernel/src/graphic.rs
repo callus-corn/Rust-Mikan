@@ -39,7 +39,7 @@ pub struct RGBWriter {
 
 impl RGBWriter {
     pub fn new(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> RGBWriter {
-        RGBWriter{
+        RGBWriter {
             frame_buffer_base: frame_buffer.base,
             //size: frame_buffer.size,
             pixels_per_scan_line: frame_buffer_config.pixels_per_scan_line,
@@ -59,8 +59,8 @@ impl RGBWriter {
     pub unsafe fn write(&self, x: usize, y: usize, c: PixelColor) {
         let point = 4 * (self.pixels_per_scan_line * y + x);
         self.frame_buffer_base.add(point).write_volatile(c.r);
-        self.frame_buffer_base.add(point+1).write_volatile(c.g);
-        self.frame_buffer_base.add(point+2).write_volatile(c.b);
+        self.frame_buffer_base.add(point + 1).write_volatile(c.g);
+        self.frame_buffer_base.add(point + 2).write_volatile(c.b);
     }
 }
 
@@ -74,7 +74,7 @@ pub struct BGRWriter {
 
 impl BGRWriter {
     pub fn new(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> BGRWriter {
-        BGRWriter{
+        BGRWriter {
             frame_buffer_base: frame_buffer.base,
             //size: frame_buffer.size,
             pixels_per_scan_line: frame_buffer_config.pixels_per_scan_line,
@@ -94,10 +94,9 @@ impl BGRWriter {
     pub unsafe fn write(&self, x: usize, y: usize, c: PixelColor) {
         let point = 4 * (self.pixels_per_scan_line * y + x);
         self.frame_buffer_base.add(point).write_volatile(c.b);
-        self.frame_buffer_base.add(point+1).write_volatile(c.g);
-        self.frame_buffer_base.add(point+2).write_volatile(c.r);
+        self.frame_buffer_base.add(point + 1).write_volatile(c.g);
+        self.frame_buffer_base.add(point + 2).write_volatile(c.r);
     }
-
 }
 
 pub struct PixelColor {

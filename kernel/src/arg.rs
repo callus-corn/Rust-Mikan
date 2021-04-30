@@ -7,7 +7,7 @@ pub struct Argument {
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct FrameBuffer{
+pub struct FrameBuffer {
     pub base: *mut u8,
     pub size: usize,
 }

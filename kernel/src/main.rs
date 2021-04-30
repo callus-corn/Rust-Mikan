@@ -2,9 +2,9 @@
 #![no_std]
 #![no_main]
 
-use kernel::graphic::{PixelColor, RGBWriter, BGRWriter, Writer};
-use kernel::arg::{Argument, PixelFormat};
 use core::panic::PanicInfo;
+use kernel::arg::{Argument, PixelFormat};
+use kernel::graphic::{BGRWriter, PixelColor, RGBWriter, Writer};
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -24,9 +24,9 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
     for x in 0..pixel_writer.horizontal_resolution() {
         for y in 0..pixel_writer.vertical_resolution() {
             let white = PixelColor {
-                r:255,
-                g:255,
-                b:255,
+                r: 255,
+                g: 255,
+                b: 255,
             };
             pixel_writer.write(x, y, white);
         }
@@ -34,11 +34,7 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
 
     for x in 0..200 {
         for y in 0..100 {
-            let green = PixelColor {
-                r:0,
-                g:255,
-                b:0,
-            };
+            let green = PixelColor { r: 0, g: 255, b: 0 };
             pixel_writer.write(x, y, green);
         }
     }

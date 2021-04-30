@@ -148,17 +148,29 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
     let mut kernel_file = unsafe { RegularFile::new(kernel_file_handle) };
     //kernel_file_info_bufferのサイズ=構造体のサイズ+ファイル名(kernel.elf=12*16bit)
     let kernel_file_info_buffer = &mut [0; 80 + 24];
-    let kernel_file_info: &mut FileInfo  = kernel_file.get_info(kernel_file_info_buffer).unwrap().unwrap();
+    let kernel_file_info: &mut FileInfo = kernel_file
+        .get_info(kernel_file_info_buffer)
+        .unwrap()
+        .unwrap();
     let kernel_file_size = kernel_file_info.file_size();
-    let kernel_file_buffer_ptr = boot_services.allocate_pool(MemoryType::LOADER_DATA, kernel_file_size as usize).unwrap_success();
+    let kernel_file_buffer_ptr = boot_services
+        .allocate_pool(MemoryType::LOADER_DATA, kernel_file_size as usize)
+        .unwrap_success();
     //安全性はallocate_poolに依存
-    let kernel_file_buffer = unsafe { slice::from_raw_parts_mut(kernel_file_buffer_ptr, kernel_file_size as usize) };
+    let kernel_file_buffer =
+        unsafe { slice::from_raw_parts_mut(kernel_file_buffer_ptr, kernel_file_size as usize) };
     kernel_file.read(kernel_file_buffer).unwrap_success();
 
     let elf_file = Elf::new(kernel_file_buffer);
     let kernel_base_addr = elf_file.calculate_base_addr() as usize;
     let kernel_page_count = elf_file.calculate_page_count();
-    boot_services.allocate_pages(AllocateType::Address(kernel_base_addr), MemoryType::LOADER_DATA, kernel_page_count).unwrap_success();
+    boot_services
+        .allocate_pages(
+            AllocateType::Address(kernel_base_addr),
+            MemoryType::LOADER_DATA,
+            kernel_page_count,
+        )
+        .unwrap_success();
     for program_header in elf_file.program_header_iter() {
         if !program_header.type_is_load() {
             continue;
@@ -171,7 +183,11 @@ fn efi_main(handle: Handle, system_table: SystemTable<Boot>) -> Status {
         for i in 0..size {
             //安全性は不明
             unsafe {
-                boot_services.memset(addr.offset(i as isize), 1, kernel_file_buffer[offset + i as usize]);
+                boot_services.memset(
+                    addr.offset(i as isize),
+                    1,
+                    kernel_file_buffer[offset + i as usize],
+                );
             }
         }
     }

@@ -11,11 +11,13 @@ pub struct Elf {
 impl Elf {
     pub fn new(buffer: &mut [u8]) -> Elf {
         let elf_header = ElfHeader::new(buffer);
-        
+
         let mut program_headers = Vec::new();
         let program_header_addr = buffer.as_ptr() as u64 + elf_header.e_phoff;
         for i in 0..elf_header.e_phnum {
-            let program_header_ptr = (program_header_addr + i as u64 * elf_header.e_phentsize as u64) as *const ProgramHeader;
+            let program_header_ptr = (program_header_addr
+                + i as u64 * elf_header.e_phentsize as u64)
+                as *const ProgramHeader;
             let program_header = unsafe { *program_header_ptr };
             program_headers.push(program_header);
         }
