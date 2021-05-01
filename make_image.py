@@ -1,9 +1,9 @@
 import subprocess as proc
 
-efi_path = "bootloader/target/x86_64-unknown-uefi/debug/bootloader.efi"
+efi_path = "bootloader/target/x86_64-unknown-uefi/release/bootloader.efi"
 proc.call('cp '+ efi_path +' BOOTX64.EFI', shell=True)
 
-kernel_path = "kernel/target/x86_64/debug/kernel.elf"
+kernel_path = "kernel/target/x86_64/release/kernel.elf"
 proc.call('cp '+ kernel_path +' kernel.elf', shell=True)
 
 proc.call('qemu-img create -f raw disk.img 200M', shell=True)

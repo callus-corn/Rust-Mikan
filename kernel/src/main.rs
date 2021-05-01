@@ -4,7 +4,8 @@
 
 use core::panic::PanicInfo;
 use kernel::arg::{Argument, PixelFormat};
-use kernel::graphic::{BGRWriter, PixelColor, RGBWriter, Writer};
+use kernel::font::Ascii;
+use kernel::graphic::{PixelColor, Writer};
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -17,8 +18,8 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
     let frame_buffer = args.frame_buffer;
     let frame_buffer_config = args.frame_buffer_config;
     let pixel_writer = match frame_buffer_config.pixel_format {
-        PixelFormat::Rgb => Writer::Rgb(RGBWriter::new(frame_buffer, frame_buffer_config)),
-        PixelFormat::Bgr => Writer::Bgr(BGRWriter::new(frame_buffer, frame_buffer_config)),
+        PixelFormat::Rgb => Writer::new_rgb(frame_buffer, frame_buffer_config),
+        PixelFormat::Bgr => Writer::new_bgr(frame_buffer, frame_buffer_config),
     };
 
     for x in 0..pixel_writer.horizontal_resolution() {
@@ -28,16 +29,27 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
                 g: 255,
                 b: 255,
             };
-            pixel_writer.write(x, y, white);
+            //一応エラー処理、エラーはめんどうなので無視
+            match pixel_writer.write(x, y, white) {
+                Ok(_) => (),
+                Err(_) => (),
+            };
         }
     }
 
     for x in 0..200 {
         for y in 0..100 {
             let green = PixelColor { r: 0, g: 255, b: 0 };
-            pixel_writer.write(x, y, green);
+            //一応エラー処理、エラーはめんどうなので無視
+            match pixel_writer.write(x, y, green) {
+                Ok(_) => (),
+                Err(_) => (),
+            };
         }
     }
+
+    let ascii = Ascii::new(pixel_writer);
+    ascii.write("1 + 2 = ");
 
     loop {}
 }
