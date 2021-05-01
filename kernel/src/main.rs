@@ -2,10 +2,11 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
 use kernel::arg::{Argument, PixelFormat};
-use kernel::font::Ascii;
-use kernel::graphic::{PixelColor, Writer};
+use kernel::console::ConsoleWriter;
+use kernel::graphic::{PixelColor, PixelWriter};
+use core::fmt::Write;
+use core::panic::PanicInfo;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -18,19 +19,15 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
     let frame_buffer = args.frame_buffer;
     let frame_buffer_config = args.frame_buffer_config;
     let pixel_writer = match frame_buffer_config.pixel_format {
-        PixelFormat::Rgb => Writer::new_rgb(frame_buffer, frame_buffer_config),
-        PixelFormat::Bgr => Writer::new_bgr(frame_buffer, frame_buffer_config),
+        PixelFormat::Rgb => PixelWriter::new_rgb(frame_buffer, frame_buffer_config),
+        PixelFormat::Bgr => PixelWriter::new_bgr(frame_buffer, frame_buffer_config),
     };
 
     for x in 0..pixel_writer.horizontal_resolution() {
         for y in 0..pixel_writer.vertical_resolution() {
-            let white = PixelColor {
-                r: 255,
-                g: 255,
-                b: 255,
-            };
+            let bg_color = PixelColor::BACKGROUND;
             //一応エラー処理、エラーはめんどうなので無視
-            match pixel_writer.write(x, y, white) {
+            match pixel_writer.write(x, y, bg_color) {
                 Ok(_) => (),
                 Err(_) => (),
             };
@@ -48,8 +45,10 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
         }
     }
 
-    let ascii = Ascii::new(pixel_writer);
-    ascii.write("1 + 2 = ");
+    let mut console_writer = ConsoleWriter::new(pixel_writer);
+    for i in 0..30 {
+        write!(console_writer, "console:{}\n", i).unwrap();
+    }
 
     loop {}
 }

@@ -2,38 +2,38 @@ use crate::arg::{FrameBuffer, FrameBufferConfig};
 use core::result::Result;
 
 #[derive(Debug, Copy, Clone)]
-pub enum Writer {
+pub enum PixelWriter {
     Rgb(RGBWriter),
     Bgr(BGRWriter),
 }
 
-impl Writer {
-    pub fn new_rgb(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> Writer {
-        Writer::Rgb(RGBWriter::new(frame_buffer, frame_buffer_config))
+impl PixelWriter {
+    pub fn new_rgb(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> PixelWriter {
+        PixelWriter::Rgb(RGBWriter::new(frame_buffer, frame_buffer_config))
     }
 
-    pub fn new_bgr(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> Writer {
-        Writer::Bgr(BGRWriter::new(frame_buffer, frame_buffer_config))
+    pub fn new_bgr(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> PixelWriter {
+        PixelWriter::Bgr(BGRWriter::new(frame_buffer, frame_buffer_config))
     }
 
     pub fn vertical_resolution(&self) -> usize {
         match self {
-            Writer::Rgb(w) => w.vertical_resolution(),
-            Writer::Bgr(w) => w.vertical_resolution(),
+            PixelWriter::Rgb(w) => w.vertical_resolution(),
+            PixelWriter::Bgr(w) => w.vertical_resolution(),
         }
     }
 
     pub fn horizontal_resolution(&self) -> usize {
         match self {
-            Writer::Rgb(w) => w.horizontal_resolution(),
-            Writer::Bgr(w) => w.horizontal_resolution(),
+            PixelWriter::Rgb(w) => w.horizontal_resolution(),
+            PixelWriter::Bgr(w) => w.horizontal_resolution(),
         }
     }
 
     pub fn write(&self, x: usize, y: usize, c: PixelColor) -> Result<(), &str> {
         match self {
-            Writer::Rgb(w) => w.write(x, y, c),
-            Writer::Bgr(w) => w.write(x, y, c),
+            PixelWriter::Rgb(w) => w.write(x, y, c),
+            PixelWriter::Bgr(w) => w.write(x, y, c),
         }
     }
 }
@@ -131,4 +131,8 @@ pub struct PixelColor {
     pub r: u8,
     pub g: u8,
     pub b: u8,
+}
+
+impl PixelColor {
+    pub const BACKGROUND: PixelColor = PixelColor{ r: 255, g: 255, b: 255};
 }
