@@ -1,5 +1,4 @@
-use crate::font::Font;
-use crate::graphic::PixelWriter;
+use crate::font::{Font, FontWriter};
 use core::fmt;
 
 pub struct ConsoleWriter {
@@ -8,14 +7,14 @@ pub struct ConsoleWriter {
     cursor_column: usize,
     characters: [Font; Font::MAX],
     error_character: Font,
-    writer: PixelWriter,
+    writer: FontWriter,
 }
 
 impl ConsoleWriter {
     const MAX_ROWS: usize = 25;
     const MAX_COLUMNS: usize = 80;
 
-    pub fn new(writer: PixelWriter) -> ConsoleWriter {
+    pub fn new(writer: FontWriter) -> ConsoleWriter {
         let screen = [['\0'; ConsoleWriter::MAX_ROWS]; ConsoleWriter::MAX_COLUMNS];
         let characters = Font::all();
         let error_character = Font::new('■');
@@ -48,9 +47,7 @@ impl ConsoleWriter {
                 let code = c as u32 as usize;
                 //範囲エラーが怖いのでget
                 let font = self.characters.get(code).unwrap_or(&self.error_character);
-                let x = (Font::WIDTH * self.cursor_column) % self.writer.horizontal_resolution();
-                let y = (Font::HEIGHT * self.cursor_row) % self.writer.vertical_resolution();
-                font.write(x, y, self.writer);
+                self.writer.write(self.cursor_column, self.cursor_row, font);
                 self.cursor_column += 1;
             }
         }
@@ -63,9 +60,7 @@ impl ConsoleWriter {
         } else {
             for x in 0..ConsoleWriter::MAX_COLUMNS {
                 for y in 0..ConsoleWriter::MAX_ROWS {
-                    let frame_x = (Font::WIDTH * x) % self.writer.horizontal_resolution();
-                    let frame_y = (Font::HEIGHT * y) % self.writer.vertical_resolution();
-                    Font::clear(frame_x, frame_y, self.writer);
+                    self.writer.clear(x, y);
                 }
             }
             for y in 0..(ConsoleWriter::MAX_ROWS - 1 ) {
@@ -76,9 +71,7 @@ impl ConsoleWriter {
                     let code = character as u32 as usize;
                     //範囲エラーが怖いのでget
                     let font = self.characters.get(code).unwrap_or(&self.error_character);
-                    let frame_x = (Font::WIDTH * x) % self.writer.horizontal_resolution();
-                    let frame_y = (Font::HEIGHT * y) % self.writer.vertical_resolution();
-                    font.write(frame_x, frame_y, self.writer);
+                    self.writer.write(x, y, font);
                 }
             }
             for x in 0..ConsoleWriter::MAX_COLUMNS {

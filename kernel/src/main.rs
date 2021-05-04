@@ -4,6 +4,7 @@
 
 use kernel::arg::{Argument, PixelFormat};
 use kernel::console::ConsoleWriter;
+use kernel::font::FontWriter;
 use kernel::graphic::{PixelColor, PixelWriter};
 use core::fmt::Write;
 use core::panic::PanicInfo;
@@ -34,18 +35,9 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
         }
     }
 
-    for x in 0..200 {
-        for y in 0..100 {
-            let green = PixelColor { r: 0, g: 255, b: 0 };
-            //一応エラー処理、エラーはめんどうなので無視
-            match pixel_writer.write(x, y, green) {
-                Ok(_) => (),
-                Err(_) => (),
-            };
-        }
-    }
-
-    let mut console_writer = ConsoleWriter::new(pixel_writer);
+    //Consoleの依存をFontに集約したかったのでFontWriterを追加
+    let font_writer = FontWriter::new(pixel_writer);
+    let mut console_writer = ConsoleWriter::new(font_writer);
     for i in 0..30 {
         write!(console_writer, "console:{}\n", i).unwrap();
     }

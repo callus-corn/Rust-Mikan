@@ -1,5 +1,47 @@
 use crate::graphic::{PixelColor, PixelWriter};
 
+pub struct FontWriter {
+    writer: PixelWriter,
+}
+
+impl FontWriter {
+    pub fn new(writer: PixelWriter) -> FontWriter {
+        FontWriter{
+            writer: writer,
+        }
+    }
+
+    pub fn write(&self, x: usize, y: usize, font: &Font) {
+        let x = (Font::WIDTH * x) % self.writer.vertical_resolution();
+        let y = (Font::HEIGHT * y) % self.writer.horizontal_resolution();
+        for dy in 0..Font::HEIGHT {
+            for dx in 0..Font::WIDTH {
+                if font.is_black_bit(dx, dy) {
+                    let black = PixelColor { r: 0, g: 0, b: 0 };
+                    match self.writer.write(x + dx, y + dy, black) {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    };
+                }
+            }
+        }
+    }
+
+    pub fn clear(&self, x: usize, y: usize) {
+        let x = (Font::WIDTH * x) % self.writer.vertical_resolution();
+        let y = (Font::HEIGHT * y) % self.writer.horizontal_resolution();
+        for dy in 0..Font::HEIGHT {
+            for dx in 0..Font::WIDTH {
+                let bg_color = PixelColor::BACKGROUND;
+                match self.writer.write(x + dx, y + dy, bg_color) {
+                    Ok(_) => (),
+                    Err(_) => (),
+                };
+            }
+        }
+    }
+}
+
 //東雲フォント
 #[derive(Debug, Copy, Clone)]
 pub struct Font {
@@ -15,32 +57,6 @@ impl Font {
     pub fn is_black_bit(&self, x: usize, y: usize) -> bool {
         //範囲エラーを避けたいのでget
         ((self.glyph.get(y).unwrap_or(&0) << x) & 0b1000_0000) == 0b1000_0000
-    }
-
-    pub fn write(&self, x: usize, y: usize, writer: PixelWriter) {
-        for dy in 0..Font::HEIGHT {
-            for dx in 0..Font::WIDTH {
-                if self.is_black_bit(dx, dy) {
-                    let black = PixelColor { r: 0, g: 0, b: 0 };
-                    match writer.write(x + dx, y + dy, black) {
-                        Ok(_) => (),
-                        Err(_) => (),
-                    };
-                }
-            }
-        }
-    }
-
-    pub fn clear(x: usize, y: usize, writer: PixelWriter) {
-        for dy in 0..Font::HEIGHT {
-            for dx in 0..Font::WIDTH {
-                let bg_color = PixelColor::BACKGROUND;
-                match writer.write(x + dx, y + dy, bg_color) {
-                    Ok(_) => (),
-                    Err(_) => (),
-                };
-            }
-        }
     }
 
     pub fn new(c: char) -> Font {
