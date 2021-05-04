@@ -134,5 +134,6 @@ pub struct PixelColor {
 }
 
 impl PixelColor {
-    pub const BACKGROUND: PixelColor = PixelColor{ r: 255, g: 255, b: 255};
+    pub const BACKGROUND: PixelColor = PixelColor{ r: 45, g: 118, b: 237};
+    pub const FRONTGROUND: PixelColor = PixelColor{ r: 255, g: 255, b: 255};
 }

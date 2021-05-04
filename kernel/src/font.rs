@@ -16,9 +16,8 @@ impl FontWriter {
         let y = (Font::HEIGHT * y) % self.writer.horizontal_resolution();
         for dy in 0..Font::HEIGHT {
             for dx in 0..Font::WIDTH {
-                if font.is_black_bit(dx, dy) {
-                    let black = PixelColor { r: 0, g: 0, b: 0 };
-                    match self.writer.write(x + dx, y + dy, black) {
+                if font.is_draw_bit(dx, dy) {
+                    match self.writer.write(x + dx, y + dy, PixelColor::FRONTGROUND) {
                         Ok(_) => (),
                         Err(_) => (),
                     };
@@ -32,8 +31,7 @@ impl FontWriter {
         let y = (Font::HEIGHT * y) % self.writer.horizontal_resolution();
         for dy in 0..Font::HEIGHT {
             for dx in 0..Font::WIDTH {
-                let bg_color = PixelColor::BACKGROUND;
-                match self.writer.write(x + dx, y + dy, bg_color) {
+                match self.writer.write(x + dx, y + dy, PixelColor::BACKGROUND) {
                     Ok(_) => (),
                     Err(_) => (),
                 };
@@ -54,7 +52,7 @@ impl Font {
     pub const HEIGHT: usize = 16;
     pub const WIDTH: usize = 8;
 
-    pub fn is_black_bit(&self, x: usize, y: usize) -> bool {
+    pub fn is_draw_bit(&self, x: usize, y: usize) -> bool {
         //範囲エラーを避けたいのでget
         ((self.glyph.get(y).unwrap_or(&0) << x) & 0b1000_0000) == 0b1000_0000
     }

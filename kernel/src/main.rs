@@ -26,9 +26,8 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
 
     for x in 0..pixel_writer.horizontal_resolution() {
         for y in 0..pixel_writer.vertical_resolution() {
-            let bg_color = PixelColor::BACKGROUND;
             //一応エラー処理、エラーはめんどうなので無視
-            match pixel_writer.write(x, y, bg_color) {
+            match pixel_writer.write(x, y, PixelColor::BACKGROUND) {
                 Ok(_) => (),
                 Err(_) => (),
             };
