@@ -6,6 +6,7 @@ use kernel::arg::{Argument, PixelFormat};
 use kernel::console::ConsoleWriter;
 use kernel::font::FontWriter;
 use kernel::graphic::{PixelColor, PixelWriter};
+use kernel::pci::{Pci, Configuration};
 use core::fmt::Write;
 use core::panic::PanicInfo;
 
@@ -37,8 +38,15 @@ pub extern "C" fn _start(args_ptr: *const Argument) -> ! {
     //Consoleの依存をFontに集約したかったのでFontWriterを追加
     let font_writer = FontWriter::new(pixel_writer);
     let mut console_writer = ConsoleWriter::new(font_writer);
-    for i in 0..30 {
-        write!(console_writer, "console:{}\n", i).unwrap();
+    write!(console_writer, "Welcome to MikanOS\n").unwrap();
+
+    let pci = Pci::new();
+    for device in pci.iter() {
+        let vender_id = Configuration::vender_id(&device);
+        let base_class = Configuration::base_class(&device);
+        let sub_class = Configuration::sub_class(&device);
+        let header_type = Configuration::header_type(&device);
+        write!(console_writer, "{}.{}.{}: vneder {}, class {}.{}, head {}\n", device.bus(), device.device(), device.function(), vender_id, base_class, sub_class, header_type).unwrap();
     }
 
     loop {}
