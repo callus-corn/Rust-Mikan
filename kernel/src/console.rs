@@ -63,9 +63,9 @@ impl ConsoleWriter {
                     self.writer.clear(x, y);
                 }
             }
-            for y in 0..(ConsoleWriter::MAX_ROWS - 1 ) {
+            for y in 0..(ConsoleWriter::MAX_ROWS - 1) {
                 for x in 0..ConsoleWriter::MAX_COLUMNS {
-                    self.screen[x][y] = self.screen[x][y+1];
+                    self.screen[x][y] = self.screen[x][y + 1];
                     let character = self.screen[x][y];
                     //へんなキャストだけど他にいい方法を知らない
                     let code = character as u32 as usize;
@@ -75,7 +75,7 @@ impl ConsoleWriter {
                 }
             }
             for x in 0..ConsoleWriter::MAX_COLUMNS {
-                self.screen[x][ConsoleWriter::MAX_ROWS -1] = '\0';
+                self.screen[x][ConsoleWriter::MAX_ROWS - 1] = '\0';
             }
         }
     }

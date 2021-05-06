@@ -6,9 +6,7 @@ pub struct FontWriter {
 
 impl FontWriter {
     pub fn new(writer: PixelWriter) -> FontWriter {
-        FontWriter{
-            writer: writer,
-        }
+        FontWriter { writer: writer }
     }
 
     pub fn write(&self, x: usize, y: usize, font: &Font) {

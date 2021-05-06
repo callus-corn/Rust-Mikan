@@ -8,11 +8,17 @@ pub enum PixelWriter {
 }
 
 impl PixelWriter {
-    pub fn new_rgb(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> PixelWriter {
+    pub fn new_rgb(
+        frame_buffer: FrameBuffer,
+        frame_buffer_config: FrameBufferConfig,
+    ) -> PixelWriter {
         PixelWriter::Rgb(RGBWriter::new(frame_buffer, frame_buffer_config))
     }
 
-    pub fn new_bgr(frame_buffer: FrameBuffer, frame_buffer_config: FrameBufferConfig) -> PixelWriter {
+    pub fn new_bgr(
+        frame_buffer: FrameBuffer,
+        frame_buffer_config: FrameBufferConfig,
+    ) -> PixelWriter {
         PixelWriter::Bgr(BGRWriter::new(frame_buffer, frame_buffer_config))
     }
 
@@ -134,6 +140,14 @@ pub struct PixelColor {
 }
 
 impl PixelColor {
-    pub const BACKGROUND: PixelColor = PixelColor{ r: 45, g: 118, b: 237};
-    pub const FRONTGROUND: PixelColor = PixelColor{ r: 255, g: 255, b: 255};
+    pub const BACKGROUND: PixelColor = PixelColor {
+        r: 45,
+        g: 118,
+        b: 237,
+    };
+    pub const FRONTGROUND: PixelColor = PixelColor {
+        r: 255,
+        g: 255,
+        b: 255,
+    };
 }

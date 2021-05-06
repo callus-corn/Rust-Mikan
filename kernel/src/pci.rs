@@ -7,13 +7,13 @@ pub struct Pci {
 }
 
 impl Pci {
-    const CAPACITY: usize = 256;//本当は65536だけどスタックが枯渇する
+    const CAPACITY: usize = 256; //本当は65536だけどスタックが枯渇する
     const MAX_BUS: usize = 256;
     const MAX_DEVICE: usize = 32;
     const MAX_FUNCTION: usize = 8;
 
     pub fn new() -> Pci {
-        let device = Device::new(0,0,0);
+        let device = Device::new(0, 0, 0);
         let mut devices = [device; Pci::CAPACITY];
         let mut size = 0;
 
@@ -70,12 +70,10 @@ impl Pci {
     }
 
     pub fn get(&self, index: usize) -> Option<Device> {
-        if index >= self.size {
+        if index >= self.size || index >= self.devices.len() {
             ()
         }
-        //sizeがおかしくなければunwrapできる
-        //参照を扱いたくないので参照外し
-        Some(*(self.devices.get(index).unwrap()))
+        Some(self.devices[index])
     }
 
     pub fn iter(&self) -> PciIterator {
@@ -90,14 +88,11 @@ pub struct PciIterator {
 
 impl PciIterator {
     pub fn new(pci: Pci) -> PciIterator {
-        PciIterator {
-            pci: pci,
-            count: 0,
-        }
+        PciIterator { pci: pci, count: 0 }
     }
 }
 
-impl Iterator for PciIterator{
+impl Iterator for PciIterator {
     type Item = Device;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -165,7 +160,7 @@ impl Configuration {
 
     pub fn header_type(device: &Device) -> u8 {
         let address = Configuration::address(device, 0x0c);
-        ((Configuration::read(address) >> 16 ) & 0xff) as u8
+        ((Configuration::read(address) >> 16) & 0xff) as u8
     }
 
     pub fn base_class(device: &Device) -> u8 {
@@ -184,7 +179,11 @@ impl Configuration {
     }
 
     fn address(device: &Device, register_offset: u8) -> u32 {
-        (1 << 31) | ((device.bus() as u32) << 16) | ((device.device() as u32) << 11) | ((device.function() as u32) << 8) | ((register_offset as u32) & 0xfc)
+        (1 << 31)
+            | ((device.bus() as u32) << 16)
+            | ((device.device() as u32) << 11)
+            | ((device.function() as u32) << 8)
+            | ((register_offset as u32) & 0xfc)
     }
 
     fn read(data: u32) -> u32 {
